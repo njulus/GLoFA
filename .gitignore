@@ -6,6 +6,7 @@ saves/
 __pycache__/
 *.py[cod]
 *$py.class
+pretrained_weights.pth
 
 # C extensions
 *.so

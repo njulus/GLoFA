@@ -18,6 +18,7 @@ from torch import optim
 
 from Train import train
 from Test import test
+from utils import global_variable as GV
 
 def display_args(args):
     print('===== task arguments =====')
@@ -30,7 +31,6 @@ def display_args(args):
     print('===== experiment environment arguments =====')
     print('devices = %s' % str(args.devices))
     print('flag_debug = %r' % (args.flag_debug))
-    print('flag_no_bar = %r' % (args.flag_no_bar))
     print('n_workers = %d' % (args.n_workers))
     print('===== optimizer arguments =====')
     print('lr_network = %f' % (args.lr_network))
@@ -57,7 +57,7 @@ if __name__ == '__main__':
     # create a parser
     parser = argparse.ArgumentParser()
     # task arguments
-    parser.add_argument('--data_name', type=str, default='mini_imagenet', choices=['mini_imagenet', 'tiered_imagenet'])
+    parser.add_argument('--data_name', type=str, default='mini_imagenet', choices=['mini_imagenet'])
     parser.add_argument('--network_name', type=str, default='resnet', choices=['resnet'])
     parser.add_argument('--model_name', type=str, default='glofa', choices=['glofa'])
     parser.add_argument('--N', type=int, default=5)
@@ -66,12 +66,11 @@ if __name__ == '__main__':
     # experiment environment arguments
     parser.add_argument('--devices', type=int, nargs='+', default=GV.DEVICES)
     parser.add_argument('--flag_debug', action='store_true', default=False)
-    parser.add_argument('--flag_no_bar', action='store_true', default=False)
     parser.add_argument('--n_workers', type=int, default=GV.WORKERS)
     # optimizer arguments
     parser.add_argument('--lr_network', type=float, default=0.0001)
     parser.add_argument('--lr', type=float, default=0.001)
-    parser.add_argument('--point', type=int, nargs='+', default=(50,100,150))
+    parser.add_argument('--point', type=int, nargs='+', default=(20,30,40))
     parser.add_argument('--gamma', type=float, default=0.2)
     parser.add_argument('--wd', type=float, default=0.0005)  # weight decay
     parser.add_argument('--mo', type=float, default=0.9)  # momentum
@@ -86,8 +85,66 @@ if __name__ == '__main__':
 
     display_args(args)
 
-    data_path = 
+    data_path = 'datasets/' + args.data_name + '/'
 
     # import modules
     Data = importlib.import_module('dataloaders.' + args.data_name)
-    Network = importlib.import_module('networks.' + args.student_network_name)
+    Network = importlib.import_module('networks.' + args.network_name)
+    Model = importlib.import_module('models.' + args.model_name)
+
+    # generate data loaders
+    train_data_loader = Data.generate_data_loader(data_path, 'train', args.n_training_episodes, args.N, args.K + args.Q)
+    validate_data_loader = Data.generate_data_loader(data_path, 'validate', args.n_validating_episodes, args.N, args.K + args.Q)
+    test_data_loader = Data.generate_data_loader(data_path, 'test', args.n_testing_episodes, args.N, args.K + args.Q)
+    print('===== data loader ready. =====')
+
+    # generate network
+    network = Network.MyNetwork(args)
+    if len(args.devices) > 1:
+        network = torch.nn.DataParallel(network, device_ids=args.devices)
+    print('===== network ready. =====')
+
+    # generate model
+    model = Model.MyModel(args, network)
+    state_dict = torch.load('pretrained_weights.pth')['params']
+    state_dict = {k:v for k, v in state_dict.items() if k.startswith('encoder')}
+    model.load_state_dict(state_dict)
+    model = model.cuda(args.devices[0])
+    print('===== model ready. =====')
+
+    model_save_path = 'saves/trained_models/' + \
+                        args.data_name + '_' + args.network_name + '_' + args.model_name + \
+                        '_N=' + str(args.N) + \
+                        '_K=' + str(args.K) + \
+                        '_Q=' + str(args.Q) + \
+                        '_lr-net=' + str(args.lr_network) + \
+                        '_lr=' + str(args.lr) + \
+                        '_point=' + str(args.point) + \
+                        '_gamma=' + str(args.gamma) + \
+                        '_wd=' + str(args.wd) + \
+                        '_mo=' + str(args.mo) + \
+                        '_tau=' + str(args.tau) + \
+                        '.model'
+    statistic_save_path = 'saves/statistics/' + \
+                            args.data_name + '_' + args.network_name + '_' + args.model_name + \
+                            '_N=' + str(args.N) + \
+                            '_K=' + str(args.K) + \
+                            '_Q=' + str(args.Q) + \
+                            '_lr-net=' + str(args.lr_network) + \
+                            '_lr=' + str(args.lr) + \
+                            '_point=' + str(args.point) + \
+                            '_gamma=' + str(args.gamma) + \
+                            '_wd=' + str(args.wd) + \
+                            '_mo=' + str(args.mo) + \
+                            '_tau=' + str(args.tau) + \
+                            '.stat'
+
+    # create directories
+    dirs = os.path.dirname(model_save_path)
+    os.makedirs(dirs, exist_ok=True)
+    dirs = os.path.dirname(statistic_save_path)
+    os.makedirs(dirs, exist_ok=True)
+
+    # training process
+    training_loss_list, validating_accuracy_list = train(args, train_data_loader, validate_data_loader, model,
+        model_save_path)
