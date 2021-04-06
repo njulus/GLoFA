@@ -86,7 +86,8 @@ if __name__ == '__main__':
 
     display_args(args)
 
+    data_path = 
+
     # import modules
     Data = importlib.import_module('dataloaders.' + args.data_name)
     Network = importlib.import_module('networks.' + args.student_network_name)
-    
