@@ -148,3 +148,9 @@ if __name__ == '__main__':
     # training process
     training_loss_list, validating_accuracy_list = train(args, train_data_loader, validate_data_loader, model,
         model_save_path)
+    record = {
+        'training_loss': training_loss_list,
+        'validating_accuracy': validating_accuracy_list
+    }
+    torch.save(record, statistic_save_path)
+    
