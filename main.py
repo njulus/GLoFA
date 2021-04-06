@@ -153,4 +153,13 @@ if __name__ == '__main__':
         'validating_accuracy': validating_accuracy_list
     }
     torch.save(record, statistic_save_path)
-    
+
+    # load best model
+    if not args.flag_debug:
+        state_dict = torch.load(model_save_path)
+        model.load_state_dict(state_dict)
+
+    # testing process
+    if not args.flag_debug:
+        testing_accuracy = test(args, test_data_loader, model)
+        print('testing acc = %f' % (testing_accuracy))
