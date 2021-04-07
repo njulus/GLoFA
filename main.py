@@ -44,7 +44,9 @@ def display_args(args):
     print('n_validating_episodes = %d' % (args.n_validating_episodes))
     print('n_testing_episodes = %d' % (args.n_testing_episodes))
     print('episode_gap = %d' % (args.episode_gap))
+    print('===== model arguments =====')
     print('tau = %f' % (args.tau))
+    print('delta = %f' % (args.delta))
 
 if __name__ == '__main__':
     # set random seed
@@ -69,7 +71,7 @@ if __name__ == '__main__':
     parser.add_argument('--n_workers', type=int, default=GV.WORKERS)
     # optimizer arguments
     parser.add_argument('--lr_network', type=float, default=0.0001)
-    parser.add_argument('--lr', type=float, default=0.001)
+    parser.add_argument('--lr', type=float, default=0.01)
     parser.add_argument('--point', type=int, nargs='+', default=(20,30,40))
     parser.add_argument('--gamma', type=float, default=0.2)
     parser.add_argument('--wd', type=float, default=0.0005)  # weight decay
@@ -79,7 +81,9 @@ if __name__ == '__main__':
     parser.add_argument('--n_validating_episodes', type=int, default=200)
     parser.add_argument('--n_testing_episodes', type=int, default=10000)
     parser.add_argument('--episode_gap', type=int, default=200)
-    parser.add_argument('--tau', type=float, default=1) # temperature
+    # model arguments
+    parser.add_argument('--tau', type=float, default=1)
+    parser.add_argument('--delta', type=float, default=1)
 
     args = parser.parse_args()
 
@@ -106,9 +110,11 @@ if __name__ == '__main__':
 
     # generate model
     model = Model.MyModel(args, network)
-    state_dict = torch.load('pretrained_weights.pth')['params']
-    state_dict = {k:v for k, v in state_dict.items() if k.startswith('encoder')}
-    model.load_state_dict(state_dict)
+    pretrained_state_dict = torch.load('pretrained_weights.pth')['params']
+    pretrained_state_dict = {k:v for k, v in pretrained_state_dict.items() if k.startswith('encoder')}
+    model_state_dict = model.state_dict()
+    model_state_dict.update(pretrained_state_dict)
+    model.load_state_dict(model_state_dict)
     model = model.cuda(args.devices[0])
     print('===== model ready. =====')
 
@@ -124,6 +130,7 @@ if __name__ == '__main__':
                         '_wd=' + str(args.wd) + \
                         '_mo=' + str(args.mo) + \
                         '_tau=' + str(args.tau) + \
+                        '_delta=' + str(args.delta) + \
                         '.model'
     statistic_save_path = 'saves/statistics/' + \
                             args.data_name + '_' + args.network_name + '_' + args.model_name + \
@@ -148,11 +155,12 @@ if __name__ == '__main__':
     # training process
     training_loss_list, validating_accuracy_list = train(args, train_data_loader, validate_data_loader, model,
         model_save_path)
-    record = {
-        'training_loss': training_loss_list,
-        'validating_accuracy': validating_accuracy_list
-    }
-    torch.save(record, statistic_save_path)
+    if not args.flag_debug:
+        record = {
+            'training_loss': training_loss_list,
+            'validating_accuracy': validating_accuracy_list
+        }
+        torch.save(record, statistic_save_path)
 
     # load best model
     if not args.flag_debug:
