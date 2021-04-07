@@ -162,10 +162,13 @@ if __name__ == '__main__':
         }
         torch.save(record, statistic_save_path)
 
+    display_args(args)
+
     # load best model
     if not args.flag_debug:
-        state_dict = torch.load(model_save_path)
-        model.load_state_dict(state_dict)
+        record = torch.load(model_save_path)
+        model.load_state_dict(record['state_dict'])
+        print('best model loaded, validating acc = %f' % record['validating_accuracy'])
 
     # testing process
     if not args.flag_debug:
