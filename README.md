@@ -10,3 +10,6 @@ This is the code of AAAI 2021 paper "Tailoring Embedding Function to Heterogeneo
       pages     = {XXXX--XXXX},
       year      = {2021}
     }
+
+## Pretrained Models
+Pretrained weights of ResNet-12 and ConvNet can be downloaded at https://github.com/Sha-Lab/FEAT.
