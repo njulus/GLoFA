@@ -60,7 +60,7 @@ def train(args, train_data_loader, validate_data_loader, model, model_save_path)
                     record = {
                         'state_dict': model.state_dict(),
                         'validating_accuracy': validating_accuracy,
-                        'epoch': epoch
+                        'epoch': (task_index + 1) / args.episode_gap
                     }
                     torch.save(record, model_save_path)
             
