@@ -7,7 +7,7 @@ This is the code of AAAI 2021 paper "Tailoring Embedding Function to Heterogeneo
                    De-Chuan Zhan},
       title     = {Tailoring Embedding Function to Heterogeneous Few-Shot Tasks by Global and Local Feature Adaptors},
       booktitle = {Proceedings of the AAAI Conference on Artificial Intelligence},
-      pages     = {XXXX--XXXX},
+      pages     = {8776--8783},
       year      = {2021}
     }
 
